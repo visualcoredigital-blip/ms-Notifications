@@ -1,26 +1,22 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
+const resend = new Resend(process.env.RESEND_API_KEY);
 
-// Configuración del transportador optimizada para la nube (Render)
+module.exports = { resend };
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  host: 'smtp.gmail.com',
-  port: 587,             // Puerto estándar para TLS
-  secure: false,         // Debe ser false para el puerto 587
+  service: 'gmail', // Al usar 'service', Nodemailer configura automáticamente host y puerto 587
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
+  // Eliminamos port y host manual para que Nodemailer use su configuración interna de Gmail
   tls: {
-    // Esto evita que la conexión se caiga por temas de certificados en contenedores
-    rejectUnauthorized: false 
+    rejectUnauthorized: false
   }
 });
 
-// Verificación de la conexión con Gmail
 transporter.verify().then(() => {
-  console.log('📧 Servidor listo para enviar correos (Puerto 587)');
+  console.log('📧 Servidor listo para enviar correos');
 }).catch((err) => {
-  // Aquí verás el error detallado si la App Password es incorrecta
   console.error('❌ Error en la configuración de email:', err.message);
 });
 
