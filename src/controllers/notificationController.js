@@ -6,12 +6,16 @@ const { customerWelcomeTemplate } = require('../templates/customerTemplate');
 const sendNotification = async (req, res) => {
     const contactData = req.body;
 
+    // 1. Validación de datos recibidos
     if (!contactData || !contactData.email) {
-        return res.status(400).json({ success: false, error: "Datos insuficientes" });
+        return res.status(400).json({ 
+            success: false, 
+            error: "Datos de contacto insuficientes" 
+        });
     }
 
     try {
-        // Configuración común para Axios
+        // 2. Configuración de autenticación para Brevo
         const axiosConfig = {
             headers: {
                 'api-key': BREVO_API_KEY,
@@ -19,7 +23,7 @@ const sendNotification = async (req, res) => {
             }
         };
 
-        // Función para armar el cuerpo del correo según la API de Brevo
+        // 3. Función auxiliar para estructurar el JSON que pide Brevo
         const crearPayload = (toEmail, subject, html) => ({
             sender: { name: "Visual Core Digital", email: "visualcoredigital@gmail.com" },
             to: [{ email: toEmail }],
@@ -27,14 +31,16 @@ const sendNotification = async (req, res) => {
             htmlContent: html
         });
 
-        // Enviamos los dos correos en paralelo usando Axios
+        // 4. Ejecución de envíos en paralelo (Admin y Cliente)
         await Promise.all([
+            // Correo para la Agencia
             axios.post(BREVO_API_URL, crearPayload(
                 process.env.EMAIL_ADMIN || 'visualcoredigital@gmail.com',
                 `Nuevo Lead: ${contactData.nombre}`,
                 contactEmailTemplate(contactData)
             ), axiosConfig),
             
+            // Correo de bienvenida para el Cliente
             axios.post(BREVO_API_URL, crearPayload(
                 contactData.email,
                 'Confirmación de contacto - Visual Core Digital',
@@ -43,17 +49,21 @@ const sendNotification = async (req, res) => {
         ]);
 
         console.log('✅ Correos enviados con éxito vía API REST (Brevo)');
-        return res.status(200).json({ success: true, message: "Notificaciones enviadas" });
+        
+        return res.status(200).json({ 
+            success: true, 
+            message: "Notificaciones enviadas correctamente" 
+        });
 
     } catch (error) {
-        // Log detallado para saber qué dice Brevo si falla
-        const errorMsg = error.response ? JSON.stringify(error.response.data) : error.message;
-        console.error('❌ Error en el envío:', errorMsg);
+        // Log detallado en caso de error de la API
+        const errorDetail = error.response ? error.response.data : error.message;
+        console.error('❌ Error en el envío:', JSON.stringify(errorDetail));
         
         return res.status(500).json({ 
             success: false, 
             error: "Fallo en el servicio de correo",
-            details: errorMsg
+            details: errorDetail 
         });
     }
 };
